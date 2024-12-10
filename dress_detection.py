@@ -10,7 +10,9 @@ import os
 import csv
 from datetime import datetime
 
-# Set up logging with color support
+# ------------------------------------------
+# Setup Logging with Color Support
+# ------------------------------------------
 class ColorFormatter(logging.Formatter):
     def format(self, record):
         level_color = {
@@ -24,148 +26,166 @@ class ColorFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
 
-# Set up logging
 handler = logging.StreamHandler()
 handler.setFormatter(ColorFormatter())
 logging.basicConfig(level=logging.INFO, handlers=[handler])
 
+# ------------------------------------------
 # Load YOLOv5 model
+# ------------------------------------------
 logging.info("Loading YOLOv5 model...")
 model = torch.hub.load('ultralytics/yolov5', 'custom', path=r"yolov5\runs\train\exp3\weights\best.pt")
 logging.info("YOLOv5 model loaded successfully.")
 
+# ------------------------------------------
+# Main Application Window
+# ------------------------------------------
 root = tk.Tk()
 root.title("UWear Dress Code Detector")
-root.configure(bg='white')  # white background for contrast
 
-WINDOW_WIDTH = 1920
-WINDOW_HEIGHT = 720
-root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+# Overall colors and styling
+BG_COLOR = "#F0F0F0"
+HEADER_BG = "#333333"
+HEADER_FG = "white"
+GUIDELINE_BG = "#FFFFFF"
+SIDEPANEL_BG = "#FAFAFA"
+
+root.configure(bg=BG_COLOR)
+root.geometry("1920x720")
 root.resizable(True, True)
 
-root.columnconfigure(0, weight=1)  
-root.columnconfigure(1, weight=3)  
-root.columnconfigure(2, weight=2)  
-root.rowconfigure(0, weight=0)    
-root.rowconfigure(1, weight=1)    
-root.rowconfigure(2, weight=0)    
+# ------------------------------------------
+# Configure Styles
+# ------------------------------------------
+style = ttk.Style(root)
+style.configure("TFrame", background=BG_COLOR)
+style.configure("TLabel", background=BG_COLOR, foreground="black")
+style.configure("Title.TLabel", font=("Arial", 18, "bold"), background=HEADER_BG, foreground=HEADER_FG)
+style.configure("Section.TLabelframe", background=GUIDELINE_BG)
+style.configure("Section.TLabelframe.Label", font=("Arial", 14, "bold"))
+style.configure("Detected.TLabelframe", background=SIDEPANEL_BG)
+style.configure("Detected.TLabelframe.Label", font=("Arial", 14, "bold"))
 
+# ------------------------------------------
+# Layout: 
+# Top row: Title
+# Middle row: Video (left), Guidelines & Detected Items (right)
+# Bottom row: Status/Detection Results
+# ------------------------------------------
+root.rowconfigure(0, weight=0)  # title bar
+root.rowconfigure(1, weight=1)  # main content
+root.rowconfigure(2, weight=0)  # bottom status
+root.columnconfigure(0, weight=1)
+
+# ------------------------------------------
+# Title Bar
+# ------------------------------------------
 title_frame = ttk.Frame(root)
-title_frame.grid(row=0, column=0, columnspan=3, sticky='nsew', pady=(10, 0))
+title_frame.grid(row=0, column=0, sticky='nsew')
+title_frame.columnconfigure(0, weight=1)
+
 title_label = ttk.Label(
     title_frame,
     text="UWear Dress Code Detector",
-    font=("Arial", 18, "bold"),
-    background="black",
-    foreground="white",
-    anchor="center",
+    style="Title.TLabel",
+    anchor="center"
 )
-title_label.pack(fill='x', pady=5)
+title_label.grid(row=0, column=0, sticky='nsew', pady=5)
 
-content_frame = ttk.Frame(root)
-content_frame.grid(row=1, column=0, columnspan=3, sticky='nsew', padx=10, pady=(5, 0))
+# ------------------------------------------
+# Main Content Frame
+# ------------------------------------------
+main_frame = ttk.Frame(root)
+main_frame.grid(row=1, column=0, sticky='nsew', padx=10, pady=10)
+main_frame.columnconfigure(0, weight=3)  # video feed
+main_frame.columnconfigure(1, weight=1)  # side panel
+main_frame.rowconfigure(0, weight=1)
 
-content_frame.columnconfigure(0, weight=1)  
-content_frame.columnconfigure(1, weight=3)  
-content_frame.columnconfigure(2, weight=2)  
-content_frame.rowconfigure(0, weight=1)
-
-left_spacer = ttk.Frame(content_frame, width=100)
-left_spacer.grid(row=0, column=0, sticky='nsew')
-
-video_frame = ttk.Frame(content_frame)
-video_frame.grid(row=0, column=1, sticky='nsew', padx=(10, 10))
+# Video Frame (Left)
+video_frame = ttk.Frame(main_frame, padding=10, style="TFrame")
+video_frame.grid(row=0, column=0, sticky='nsew')
 video_frame.columnconfigure(0, weight=1)
 video_frame.rowconfigure(0, weight=1)
 
 label = ttk.Label(video_frame, borderwidth=2, relief="solid")
 label.grid(row=0, column=0, sticky='nsew')
 
-side_panel_frame = ttk.Frame(content_frame)
-side_panel_frame.grid(row=0, column=2, sticky='nsew')
+# Side Panel Frame (Right)
+side_panel_frame = ttk.Frame(main_frame, padding=(10,10), style="TFrame")
+side_panel_frame.grid(row=0, column=1, sticky='nsew')
 side_panel_frame.columnconfigure(0, weight=1)
 side_panel_frame.rowconfigure(0, weight=0)  
 side_panel_frame.rowconfigure(1, weight=1)  
 
-# ----- Text at the Top of the Side Panel -----
-static_text_frame = ttk.Frame(side_panel_frame)
-static_text_frame.grid(row=0, column=0, sticky='ew', pady=(0, 10))
+# Guidelines Section
+guidelines_frame = ttk.Labelframe(side_panel_frame, text="Dress Code Guidelines", style="Section.TLabelframe")
+guidelines_frame.grid(row=0, column=0, sticky='new', padx=0, pady=(0,10))
+guidelines_frame.columnconfigure(0, weight=1)
 
-# Example text guidelines - customize as needed
 guidelines_text = (
-    "Dress Code Guidelines According to Handbook Section 27: Code of Conduct:\n"
+    "According to Handbook Section 27: Code of Conduct:\n"
     "1. Skirts/Dresses: No more than 2 inches above knee.\n"
     "2. No cropped tops.\n"
     "3. No ripped pants exposing skin 3 inches above knee.\n"
     "4. Shorts: Not more than 3 inches above kneecap.\n"
-    "5. No sleeveless tops.\n"
+    "5. No sleeveless tops."
 )
 
 guidelines_label = ttk.Label(
-    static_text_frame,
+    guidelines_frame,
     text=guidelines_text,
     font=("Arial", 12),
-    wraplength=350,
-    anchor="center",  # Center the text horizontally within the label
-    justify="center"  # Ensure that the text is centered
+    wraplength=300,
+    background=GUIDELINE_BG,
+    justify="center",  # Center the text
+    anchor="center"
 )
-guidelines_label.pack(expand=True, fill='both', padx=5, pady=5)
+guidelines_label.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
 
-guidelines_label.pack(expand=True, fill='both', padx=5, pady=5)
+# Detected Items Section
+detected_frame = ttk.Labelframe(side_panel_frame, text="Detected Items", style="Detected.TLabelframe")
+detected_frame.grid(row=1, column=0, sticky='nsew')
+detected_frame.columnconfigure(0, weight=1)
+detected_frame.rowconfigure(0, weight=1)
 
-detected_images_canvas = tk.Canvas(side_panel_frame, bg='white')
-detected_images_scrollbar = ttk.Scrollbar(side_panel_frame, orient="vertical", command=detected_images_canvas.yview)
-detected_images_scrollable_frame = ttk.Frame(detected_images_canvas)
+# Use a Canvas with a Scrollbar and a Frame inside for better alignment control
+detected_canvas = tk.Canvas(detected_frame, background=SIDEPANEL_BG)
+detected_canvas.grid(row=0, column=0, sticky='nsew')
 
-detected_images_scrollable_frame.bind(
-    "<Configure>",
-    lambda e: detected_images_canvas.configure(
-        scrollregion=detected_images_canvas.bbox("all")
-    )
-)
+detected_scrollbar = ttk.Scrollbar(detected_frame, orient='vertical', command=detected_canvas.yview)
+detected_scrollbar.grid(row=0, column=1, sticky='ns')
 
-detected_images_canvas.create_window((0, 0), window=detected_images_scrollable_frame, anchor="nw")
-detected_images_canvas.configure(yscrollcommand=detected_images_scrollbar.set)
+detected_canvas.configure(yscrollcommand=detected_scrollbar.set)
 
-detected_images_canvas.grid(row=1, column=0, sticky='nsew')
-detected_images_scrollbar.grid(row=1, column=1, sticky='ns')
+# Create a frame inside the canvas
+detected_items_frame = ttk.Frame(detected_canvas, style="Detected.TLabelframe")
+detected_canvas.create_window((0, 0), window=detected_items_frame, anchor='nw')
 
-IMAGE_PATH = r"C:\Users\Caleb\Desktop\UWear\sidefeedimages"
+def on_frame_configure(event):
+    detected_canvas.configure(scrollregion=detected_canvas.bbox("all"))
 
-illegal_wear_images = {}
-image_filenames = {
-    'Skirt': 'skirt.png',
-    'cropped_top': 'cropped_top.png',
-    'ripped_pants': 'ripped_pants.png',
-    'shorts': 'shorts.png',
-    'sleeveless': 'sleeveless.png'
-}
+detected_items_frame.bind("<Configure>", on_frame_configure)
 
-try:
-    resample_filter = Image.Resampling.LANCZOS
-except AttributeError:
-    resample_filter = Image.LANCZOS
-
-for key, filename in image_filenames.items():
-    image_path = os.path.join(IMAGE_PATH, filename)
-    try:
-        img = Image.open(image_path)
-        illegal_wear_images[key] = img
-    except IOError:
-        logging.error(f"Error loading image for {key} from {image_path}")
-
-photo_images = {}
+# ------------------------------------------
+# Bottom Status/Detection Results
+# ------------------------------------------
+status_frame = ttk.Frame(root)
+status_frame.grid(row=2, column=0, sticky='nsew')
+status_frame.columnconfigure(0, weight=1)
 
 notification_label = ttk.Label(
-    root,
+    status_frame,
     text="Detection Results: ",
-    font=("Arial", 16),
-    background="black",
-    foreground="white",
-    anchor="center",
+    font=("Arial", 14, "bold"),
+    background=HEADER_BG,
+    foreground=HEADER_FG,
+    anchor="center"
 )
-notification_label.grid(row=2, column=0, columnspan=3, sticky='nsew', pady=10)
+notification_label.grid(row=0, column=0, sticky='nsew', pady=10)
 
+# ------------------------------------------
+# Violation Handling
+# ------------------------------------------
 VIOLATIONS_CSV = "violations.csv"
 violation_handling = False
 
@@ -211,38 +231,32 @@ def update_gui(image, message, detected_items):
     update_side_panel(detected_items)
 
 def update_side_panel(detected_items):
-    # Clear existing widgets in the scrollable frame
-    for widget in detected_images_scrollable_frame.winfo_children():
+    # Clear existing widgets in the detected_items_frame
+    for widget in detected_items_frame.winfo_children():
         widget.destroy()
     
-    for item in detected_items:
-        if item in illegal_wear_images:
-            img = illegal_wear_images[item]
-            max_detected_width = 400
-            max_detected_height = 400
-            img.thumbnail((max_detected_width, max_detected_height), resample_filter)
-            
-            photo = ImageTk.PhotoImage(img)
-
-            # Create a new frame for each image
-            image_frame = ttk.Frame(detected_images_scrollable_frame)
-            image_frame.grid(row=detected_images_scrollable_frame.grid_size()[1], column=0, pady=10, sticky='ew')
-            
-            # Create and pack the photo_label centered in its frame
-            photo_label = ttk.Label(image_frame, image=photo)
-            photo_label.image = photo  # Keep a reference to avoid garbage collection
-            photo_label.grid(row=0, column=0, padx=10, pady=5, sticky='ew')
-            
-            # Create and pack the description label centered in its frame
-            description = ttk.Label(image_frame, text=item.replace('_', ' ').title(), font=("Arial", 12))
-            description.grid(row=1, column=0, padx=10, pady=5, sticky='ew')
-            
-            # Store the photo reference
-            photo_images[item] = photo
-
-    # Ensure the parent scrollable frame stretches to fit its container
-    detected_images_scrollable_frame.grid_columnconfigure(0, weight=1, uniform="center")
-
+    if detected_items:
+        for item in detected_items:
+            item_text = f"- {item.replace('_', ' ').title()} detected."
+            item_label = ttk.Label(
+                detected_items_frame,
+                text=item_text,
+                font=("Arial", 12),
+                background=SIDEPANEL_BG,
+                anchor="center",
+                justify="center"
+            )
+            item_label.pack(pady=5, padx=10, anchor='center')
+    else:
+        no_violation_label = ttk.Label(
+            detected_items_frame,
+            text="No violations detected.",
+            font=("Arial", 12, "italic"),
+            background=SIDEPANEL_BG,
+            anchor="center",
+            justify="center"
+        )
+        no_violation_label.pack(pady=5, padx=10, anchor='center')
 
 def video_stream():
     logging.info("Starting video stream...")
@@ -271,7 +285,7 @@ def video_stream():
         for index, row in detections.iterrows():
             item = row['name']
             if item == 'Skirt':
-                message += "Skirt detected (Section 27.1.2.7) "
+                message += "Skirt detected (Section 27.1.2.7). "
                 detected_items.append('Skirt')
             elif item in ['Trousers', 'valid_top']:
                 message += f"{item} detected (legal wear). "
@@ -300,6 +314,7 @@ def video_stream():
     cap.release()
     logging.info("Video stream stopped.")
 
+# Start the video stream in a separate thread
 thread = threading.Thread(target=video_stream)
 thread.daemon = True
 thread.start()
